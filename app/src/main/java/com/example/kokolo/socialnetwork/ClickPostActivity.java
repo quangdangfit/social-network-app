@@ -12,6 +12,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -54,6 +55,8 @@ public class ClickPostActivity extends AppCompatActivity {
 
     // Comment
     RecyclerView commentsList;
+    TextView inputTextView;
+    ImageButton postCommentButton;
 
     DatabaseReference ClickPostRef, CommentsRef, UsersRef, LikeRef;
     FirebaseAuth mAuth;
@@ -74,7 +77,7 @@ public class ClickPostActivity extends AppCompatActivity {
         ClickPostRef = FirebaseDatabase.getInstance().getReference().child("Posts").child(PostKey);
         UsersRef = FirebaseDatabase.getInstance().getReference().child("Users");
         LikeRef = FirebaseDatabase.getInstance().getReference().child("Likes");
-        CommentsRef = FirebaseDatabase.getInstance().getReference().child("Posts").child(PostKey).child("Comments");
+        CommentsRef = ClickPostRef.child("Comments");
 
         PostImage = findViewById(R.id.click_post_image);
         PostDescription = findViewById(R.id.click_post_description);
@@ -96,9 +99,15 @@ public class ClickPostActivity extends AppCompatActivity {
         linearLayoutManager.setReverseLayout(true);
         linearLayoutManager.setStackFromEnd(true);
         commentsList.setLayoutManager(linearLayoutManager);
+        commentsList.setFocusable(false);
+        inputTextView = findViewById(R.id.click_post_comment_input);
+        postCommentButton = findViewById(R.id.click_post_send_comment_button);
 
         DeletePostButton.setVisibility(View.INVISIBLE);
         EditPostButton.setVisibility(View.INVISIBLE);
+
+        getWindow().setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 
         ClickPostRef.addValueEventListener(new ValueEventListener() {
             @Override
@@ -174,14 +183,9 @@ public class ClickPostActivity extends AppCompatActivity {
                     clickCommentButton.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            Intent commentPostIntent =  new Intent(ClickPostActivity.this, CommentsActivity.class);
-                            commentPostIntent.putExtra("PostKey", PostKey);
-                            startActivity(commentPostIntent);
+                            Toast.makeText(ClickPostActivity.this,"Write comments below!", Toast.LENGTH_SHORT).show();
                         }
                     });
-
-
-
 
                     if (currentUserID.equals(databaseUserID)){
                         DeletePostButton.setVisibility(View.VISIBLE);
@@ -194,12 +198,75 @@ public class ClickPostActivity extends AppCompatActivity {
                             EditCurrentPost(description);
                         }
                     });
+
+                    userProfileImage.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            ClickPostRef.addValueEventListener(new ValueEventListener() {
+                                @Override
+                                public void onDataChange(DataSnapshot dataSnapshot) {
+                                    if(dataSnapshot.exists()){
+                                        String userId = dataSnapshot.child("uid").getValue().toString();
+                                        SendUserToProfileActivity(userId);
+                                    }
+                                }
+
+                                @Override
+                                public void onCancelled(DatabaseError databaseError) {
+
+                                }
+                            });
+                        }
+                    });
+
+                    UserName.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            ClickPostRef.addValueEventListener(new ValueEventListener() {
+                                @Override
+                                public void onDataChange(DataSnapshot dataSnapshot) {
+                                    if(dataSnapshot.exists()){
+                                        String userId = dataSnapshot.child("uid").getValue().toString();
+                                        SendUserToProfileActivity(userId);
+                                    }
+                                }
+
+                                @Override
+                                public void onCancelled(DatabaseError databaseError) {
+
+                                }
+                            });
+                        }
+                    });
                 }
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
 
+            }
+        });
+
+        postCommentButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                UsersRef.child(currentUserID).addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        if (dataSnapshot.exists()){
+                            String userName = dataSnapshot.child("username").getValue().toString();
+
+                            validateComment(userName);
+
+                            inputTextView.setText("");
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                });
             }
         });
 
@@ -266,18 +333,19 @@ public class ClickPostActivity extends AppCompatActivity {
         finish();
     }
 
+    @Override
     protected void onStart() {
         super.onStart();
 
-        FirebaseRecyclerAdapter<Comments, CommentsActivity.CommentsViewHolder> firebaseRecyclerAdapter
-                = new FirebaseRecyclerAdapter<Comments, CommentsActivity.CommentsViewHolder>(
+        FirebaseRecyclerAdapter<Comments, ClickPostCommentsViewHolder> firebaseRecyclerAdapter
+                = new FirebaseRecyclerAdapter<Comments, ClickPostCommentsViewHolder>(
                 Comments.class,
                 R.layout.all_comments_layout,
-                CommentsActivity.CommentsViewHolder.class,
+                ClickPostCommentsViewHolder.class,
                 CommentsRef
         ) {
             @Override
-            protected void populateViewHolder(CommentsActivity.CommentsViewHolder viewHolder, Comments model, int position) {
+            protected void populateViewHolder(ClickPostCommentsViewHolder viewHolder, Comments model, int position) {
                 viewHolder.setDate(model.getDate());
                 viewHolder.setTime(model.getTime());
                 viewHolder.setUsername(model.getUsername());
@@ -288,4 +356,82 @@ public class ClickPostActivity extends AppCompatActivity {
         commentsList.setAdapter(firebaseRecyclerAdapter);
     }
 
+    // Quang code
+    private void SendUserToProfileActivity(String userId) {
+        Intent profileIntent = new Intent(ClickPostActivity.this, ProfileActivity.class);
+        profileIntent.putExtra("userId", userId);
+        startActivity(profileIntent);
+    }
+
+    public static class ClickPostCommentsViewHolder extends RecyclerView.ViewHolder{
+
+        View mView;
+
+        public ClickPostCommentsViewHolder(View itemView) {
+            super(itemView);
+            mView = itemView;
+        }
+
+        public void setUsername(String username) {
+            TextView myUserName = mView.findViewById(R.id.comment_username);
+            myUserName.setText("@" + username + "  ");
+        }
+
+        public void setTime(String time) {
+            TextView myTime = mView.findViewById(R.id.comment_time);
+            myTime.setText(time);
+        }
+
+        public void setDate(String date) {
+            TextView myDate = mView.findViewById(R.id.comment_date);
+            myDate.setText(" " + date + " ");
+        }
+
+        public void setComment(String comment) {
+            TextView myComment = mView.findViewById(R.id.comment_content);
+            myComment.setText(comment);
+        }
+    }
+
+
+    private void validateComment(String userName) {
+        String commentText = inputTextView.getText().toString();
+        if (TextUtils.isEmpty(commentText)){
+            Toast.makeText(this, "Please insert comment", Toast.LENGTH_SHORT).show();
+        }
+        else{
+            Calendar calFordDate = Calendar.getInstance();
+            SimpleDateFormat currentDate = new SimpleDateFormat("dd-MMMM-yyyy", Locale.US);
+            final String saveCurrentDate = currentDate.format(calFordDate.getTime());
+
+            SimpleDateFormat currentDate2 = new SimpleDateFormat("dd/MM/yyyy");
+            final String saveCurrentDate2 = currentDate2.format(calFordDate.getTime());
+
+            Calendar calFordTime = Calendar.getInstance();
+            SimpleDateFormat currentTime = new SimpleDateFormat("HH:mm");
+            final String saveCurrentTime = currentTime.format(calFordTime.getTime());
+
+            final String randomKey = currentUserID + saveCurrentDate + saveCurrentTime;
+
+            HashMap commentsMap = new HashMap();
+            commentsMap.put("uid", currentUserID);
+            commentsMap.put("comment", commentText);
+            commentsMap.put("date", saveCurrentDate2);
+            commentsMap.put("time", saveCurrentTime);
+            commentsMap.put("username", userName);
+
+            CommentsRef.child(randomKey).updateChildren(commentsMap)
+                    .addOnCompleteListener(new OnCompleteListener() {
+                        @Override
+                        public void onComplete(@NonNull Task task) {
+                            if (task.isSuccessful()){
+
+                            }
+                            else{
+                                Toast.makeText(ClickPostActivity.this, "Error occured, Try again...", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+        }
+    }
 }

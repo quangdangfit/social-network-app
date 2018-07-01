@@ -4,8 +4,11 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
@@ -26,10 +29,11 @@ public class ProfileActivity extends AppCompatActivity {
     CircleImageView userProfileImage;
     RecyclerView postList;
 
-    DatabaseReference profileUserRef, postsRef;
+    DatabaseReference profileUserRef, postsRef, likesRef;
     FirebaseAuth mAuth;
 
-    String currentUserId;
+    static String currentUserId, userId;
+    Boolean likeChecker = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,9 +41,12 @@ public class ProfileActivity extends AppCompatActivity {
         setContentView(R.layout.activity_profile);
 
         mAuth = FirebaseAuth.getInstance();
+        Intent intent = getIntent();
+        userId = intent.getStringExtra("userId");
         currentUserId = mAuth.getCurrentUser().getUid();
-        profileUserRef = FirebaseDatabase.getInstance().getReference().child("Users").child(currentUserId);
+        profileUserRef = FirebaseDatabase.getInstance().getReference().child("Users").child(userId);
         postsRef = FirebaseDatabase.getInstance().getReference().child("Posts");
+        likesRef = FirebaseDatabase.getInstance().getReference().child("Likes");
 
         userName = findViewById(R.id.my_username);
         userProfName = findViewById(R.id.my_profile_full_name);
@@ -49,7 +56,14 @@ public class ProfileActivity extends AppCompatActivity {
         userRelation = findViewById(R.id.my_relationship_status);
         userDOB = findViewById(R.id.my_dob);
         userProfileImage = findViewById(R.id.my_profile_pic);
+
         postList = findViewById(R.id.all_current_users_post_list);
+        postList.setHasFixedSize(true);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        linearLayoutManager.setReverseLayout(true);
+        linearLayoutManager.setStackFromEnd(true);
+        postList.setLayoutManager(linearLayoutManager);
+        postList.setFocusable(false);
 
         profileUserRef.addValueEventListener(new ValueEventListener() {
             @SuppressLint("SetTextI18n")
@@ -83,23 +97,23 @@ public class ProfileActivity extends AppCompatActivity {
             }
         });
 
-        displayAllUsersPosts();
+        displayAllCurrentUsersPosts();
     }
 
-    private void displayAllUsersPosts() {
+    private void displayAllCurrentUsersPosts() {
 
-        Query searchFriendsQuery = postsRef.orderByChild("date");
-        FirebaseRecyclerAdapter<Posts, MainActivity.PostsViewHolder> firebaseRecyclerAdapter =
-                new FirebaseRecyclerAdapter<Posts, MainActivity.PostsViewHolder>
+        Query searchFriendsQuery = postsRef.orderByChild("uid").equalTo(userId);
+        FirebaseRecyclerAdapter<Posts, ProfileActivity.PostsViewHolder> firebaseRecyclerAdapter =
+                new FirebaseRecyclerAdapter<Posts, ProfileActivity.PostsViewHolder>
                         (
                                 Posts.class,
                                 R.layout.all_post_layout,
-                                MainActivity.PostsViewHolder.class,
+                                ProfileActivity.PostsViewHolder.class,
                                 searchFriendsQuery
                         )
                 {
                     @Override
-                    protected void populateViewHolder(MainActivity.PostsViewHolder viewHolder, Posts model, int position)
+                    protected void populateViewHolder(ProfileActivity.PostsViewHolder viewHolder, Posts model, int position)
                     {
                         final String PostKey = getRef(position).getKey();
 
@@ -127,9 +141,135 @@ public class ProfileActivity extends AppCompatActivity {
                         else{
                             viewHolder.setDefaultProfileimage();
                         }
+                        viewHolder.likePostButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                likeChecker = true;
+
+                                likesRef.addValueEventListener(new ValueEventListener() {
+                                    @Override
+                                    public void onDataChange(DataSnapshot dataSnapshot) {
+                                        if (likeChecker.equals(true)){
+                                            if (dataSnapshot.child(PostKey).hasChild(currentUserId)){
+                                                likesRef.child(PostKey).child(currentUserId).removeValue();
+                                                likeChecker = false;
+                                            }
+                                            else{
+                                                likesRef.child(PostKey).child(currentUserId).setValue(true);
+                                                likeChecker = false;
+                                            }
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onCancelled(DatabaseError databaseError) {
+
+                                    }
+                                });
+                            }
+                        });
+
+                        viewHolder.commentPostButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                Intent commentPostIntent =  new Intent(ProfileActivity.this, CommentsActivity.class);
+                                commentPostIntent.putExtra("PostKey", PostKey);
+                                startActivity(commentPostIntent);
+                            }
+                        });
+
                     }
                 };
 
         postList.setAdapter(firebaseRecyclerAdapter);
+    }
+
+    public static class PostsViewHolder extends RecyclerView.ViewHolder{
+
+        View mView;
+        ImageButton likePostButton, commentPostButton;
+        CircleImageView postProfileImage;
+        TextView displayNoOfLikes;
+        int countLikes;
+        DatabaseReference LikesRef;
+
+        public void setLikeButtonStatus(final String PostKey){
+            LikesRef.addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    countLikes = (int) dataSnapshot.child(PostKey).getChildrenCount();
+                    if (dataSnapshot.child(PostKey).hasChild(currentUserId)){
+                        likePostButton.setImageResource(R.drawable.like);
+                        if (countLikes > 1){
+                            displayNoOfLikes.setText(Integer.toString(countLikes) + " Likes");
+                        }else {
+                            displayNoOfLikes.setText(Integer.toString(countLikes) + " Like");
+                        }
+                    }
+                    else {
+                        likePostButton.setImageResource(R.drawable.dislike);
+                        if (countLikes > 1){
+                            displayNoOfLikes.setText(Integer.toString(countLikes) + " Likes");
+                        }else {
+                            displayNoOfLikes.setText(Integer.toString(countLikes) + " Like");
+                        }
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            });
+
+        }
+
+        public PostsViewHolder(View itemView) {
+            super(itemView);
+
+            mView = itemView;
+            likePostButton = mView.findViewById(R.id.like_button);
+            commentPostButton = mView.findViewById(R.id.comment_button);
+            displayNoOfLikes = mView.findViewById(R.id.display_no_of_likes);
+            postProfileImage = mView.findViewById(R.id.post_profile_image);
+
+            LikesRef = FirebaseDatabase.getInstance().getReference().child("Likes");
+        }
+
+        public void setFullname(String fullname){
+            TextView username = mView.findViewById(R.id.post_user_name);
+            username.setText(fullname);
+        }
+
+        public void setProfileimage(String profileimage){
+            CircleImageView image = mView.findViewById(R.id.post_profile_image);
+            Picasso.get().load(profileimage).into(image);
+        }
+
+        public void setDefaultProfileimage(){
+            CircleImageView image = mView.findViewById(R.id.post_profile_image);
+            image.setImageResource(R.drawable.profile);
+        }
+
+        public void setDescription(String description) {
+            TextView postDescription = mView.findViewById(R.id.post_description);
+            postDescription.setText(description);
+        }
+
+        public void setPostimage(String postimage){
+            ImageView postImage = mView.findViewById(R.id.post_image);
+            Picasso.get().load(postimage).into(postImage);
+        }
+
+        public void setDate(String date){
+            TextView postDate = mView.findViewById(R.id.post_date);
+            postDate.setText("   " + date);
+        }
+
+        public void setTime(String time){
+            TextView postTime = mView.findViewById(R.id.post_time);
+            postTime.setText("   " + time);
+        }
+
     }
 }

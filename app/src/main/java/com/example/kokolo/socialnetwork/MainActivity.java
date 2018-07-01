@@ -188,7 +188,40 @@ public class MainActivity extends AppCompatActivity {
                         viewHolder.postProfileImage.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                //SendUserToProfileActivity();
+                                postsRef.addValueEventListener(new ValueEventListener() {
+                                    @Override
+                                    public void onDataChange(DataSnapshot dataSnapshot) {
+                                        if(dataSnapshot.exists()){
+                                            String userId = dataSnapshot.child(PostKey).child("uid").getValue().toString();
+                                            SendUserToProfileActivity(userId);
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onCancelled(DatabaseError databaseError) {
+
+                                    }
+                                });
+                            }
+                        });
+
+                        viewHolder.fullName.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                postsRef.addValueEventListener(new ValueEventListener() {
+                                    @Override
+                                    public void onDataChange(DataSnapshot dataSnapshot) {
+                                        if(dataSnapshot.exists()){
+                                            String userId = dataSnapshot.child(PostKey).child("uid").getValue().toString();
+                                            SendUserToProfileActivity(userId);
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onCancelled(DatabaseError databaseError) {
+
+                                    }
+                                });
                             }
                         });
                     }
@@ -206,6 +239,7 @@ public class MainActivity extends AppCompatActivity {
         ImageButton likePostButton, commentPostButton;
         CircleImageView postProfileImage;
         TextView displayNoOfLikes;
+        TextView fullName;
         int countLikes;
         String currentUserID;
         DatabaseReference LikesRef;
@@ -214,15 +248,22 @@ public class MainActivity extends AppCompatActivity {
             LikesRef.addValueEventListener(new ValueEventListener() {
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot) {
+                    countLikes = (int) dataSnapshot.child(PostKey).getChildrenCount();
                     if (dataSnapshot.child(PostKey).hasChild(currentUserID)){
-                        countLikes = (int) dataSnapshot.child(PostKey).getChildrenCount();
                         likePostButton.setImageResource(R.drawable.like);
-                        displayNoOfLikes.setText(Integer.toString(countLikes) + " Like");
+                        if (countLikes > 1){
+                            displayNoOfLikes.setText(Integer.toString(countLikes) + " Likes");
+                        }else {
+                            displayNoOfLikes.setText(Integer.toString(countLikes) + " Like");
+                        }
                     }
                     else {
-                        countLikes = (int) dataSnapshot.child(PostKey).getChildrenCount();
                         likePostButton.setImageResource(R.drawable.dislike);
-                        displayNoOfLikes.setText(Integer.toString(countLikes) + " Like");
+                        if (countLikes > 1){
+                            displayNoOfLikes.setText(Integer.toString(countLikes) + " Likes");
+                        }else {
+                            displayNoOfLikes.setText(Integer.toString(countLikes) + " Like");
+                        }
                     }
                 }
 
@@ -242,6 +283,7 @@ public class MainActivity extends AppCompatActivity {
             commentPostButton = mView.findViewById(R.id.comment_button);
             displayNoOfLikes = mView.findViewById(R.id.display_no_of_likes);
             postProfileImage = mView.findViewById(R.id.post_profile_image);
+            fullName = mView.findViewById(R.id.post_user_name);
 
             LikesRef = FirebaseDatabase.getInstance().getReference().child("Likes");
             currentUserID = FirebaseAuth.getInstance().getCurrentUser().getUid();
@@ -378,7 +420,8 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Home", Toast.LENGTH_SHORT).show();
                 break;
             case R.id.nav_profile:
-                SendUserToProfileActivity();
+                currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                SendUserToProfileActivity(currentUserId);
                 break;
             case R.id.nav_friends:
                 Toast.makeText(this, "Friends", Toast.LENGTH_SHORT).show();
@@ -407,9 +450,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // Quang code
-    private void SendUserToProfileActivity() {
-        Intent loginIntent = new Intent(MainActivity.this, ProfileActivity.class);
-        startActivity(loginIntent);
+    private void SendUserToProfileActivity(String userId) {
+        Intent profileIntent = new Intent(MainActivity.this, ProfileActivity.class);
+        profileIntent.putExtra("userId", userId);
+        startActivity(profileIntent);
     }
 
 }
