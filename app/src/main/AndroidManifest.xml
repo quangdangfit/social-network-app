@@ -37,7 +37,9 @@
             android:name=".SettingsActivity"
             android:parentActivityName=".MainActivity" />
         <activity android:name=".ProfileActivity" />
-        <activity android:name=".CommentsActivity"></activity>
+        <activity android:name=".CommentsActivity" />
+        <activity android:name=".ResetPasswordActivity"
+            android:parentActivityName=".MainActivity"></activity>
     </application>
 
 </manifest>
