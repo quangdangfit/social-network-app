@@ -425,7 +425,6 @@ public class ClickPostActivity extends AppCompatActivity {
                         @Override
                         public void onComplete(@NonNull Task task) {
                             if (task.isSuccessful()){
-
                             }
                             else{
                                 Toast.makeText(ClickPostActivity.this, "Error occured, Try again...", Toast.LENGTH_SHORT).show();

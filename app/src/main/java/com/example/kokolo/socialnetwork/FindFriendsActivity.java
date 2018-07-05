@@ -1,5 +1,6 @@
 package com.example.kokolo.socialnetwork;
 
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -71,10 +72,20 @@ public class FindFriendsActivity extends AppCompatActivity {
                                 searchFriendsQuery
                         ) {
             @Override
-            protected void populateViewHolder(FindFriendsViewHolder viewHolder, FindFriends model, int position) {
+            protected void populateViewHolder(FindFriendsViewHolder viewHolder, FindFriends model, final int position) {
                 viewHolder.setFullname(model.getFullname());
                 viewHolder.setProfileimage((model.getProfileimage()));
                 viewHolder.setStatus(model.getStatus());
+
+                viewHolder.mView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        String userId = getRef(position).getKey();
+                        Intent intent = new Intent(FindFriendsActivity.this, ProfileActivity.class);
+                        intent.putExtra("userId", userId);
+                        startActivity(intent);
+                    }
+                });
             }
         };
 
