@@ -103,7 +103,7 @@ public class FindFriendsActivity extends AppCompatActivity {
 
         public void setProfileimage(String profileimage){
             CircleImageView image = mView.findViewById(R.id.all_users_profile_image);
-            Picasso.get().load(profileimage).into(image);
+            Picasso.get().load(profileimage).placeholder(R.drawable.profile).into(image);
         }
 
         public void setFullname(String fullname){

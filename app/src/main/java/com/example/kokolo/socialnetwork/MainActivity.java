@@ -424,12 +424,14 @@ public class MainActivity extends AppCompatActivity {
                 SendUserToProfileActivity(currentUserId);
                 break;
             case R.id.nav_friends:
+                SendUserToFriendsActivity();
                 Toast.makeText(this, "Friends", Toast.LENGTH_SHORT).show();
                 break;
             case R.id.nav_find_friend:
                 sendUserToFindFriendsActivity();
                 break;
             case R.id.nav_messages:
+                SendUserToFriendsActivity();
                 Toast.makeText(this, "Messages", Toast.LENGTH_SHORT).show();
                 break;
             // Quang code
@@ -454,6 +456,12 @@ public class MainActivity extends AppCompatActivity {
         Intent profileIntent = new Intent(MainActivity.this, ProfileActivity.class);
         profileIntent.putExtra("userId", userId);
         startActivity(profileIntent);
+    }
+
+    // Quang code
+    private void SendUserToFriendsActivity() {
+        Intent friendsIntent = new Intent(MainActivity.this, FriendsActivity.class);
+        startActivity(friendsIntent);
     }
 
 }

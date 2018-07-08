@@ -41,7 +41,9 @@
         <activity
             android:name=".ResetPasswordActivity"
             android:parentActivityName=".MainActivity" />
-        <activity android:name=".FriendsActivity"></activity>
+        <activity android:name=".FriendsActivity" />
+        <activity android:name=".ChatActivity"
+            android:parentActivityName=".MainActivity"></activity>
     </application>
 
 </manifest>
